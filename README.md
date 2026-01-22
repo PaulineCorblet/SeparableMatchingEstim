@@ -15,17 +15,22 @@ This package implements estimation methods for separable matching models, which 
 
 ## Installation
 
-Install from GitHub:
+**Important:** This package requires `NonLinearProg.jl`, which must be installed first as it's not in the Julia package registry:
 
 ```julia
 using Pkg
+Pkg.add(url="https://github.com/PaulineCorblet/NonLinearProg.git")
+```
+
+Then install `SeparableMatchingEstim` from GitHub:
+
+```julia
 Pkg.add(url="https://github.com/PaulineCorblet/SeparableMatchingEstim.git")
 ```
 
 Or install from a local path:
 
 ```julia
-using Pkg
 Pkg.add(path="path/to/SeparableMatchingEstim")
 ```
 

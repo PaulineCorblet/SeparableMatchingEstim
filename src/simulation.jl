@@ -125,13 +125,25 @@ function create_dataframe(mdl, σ, N; addon="")
     df_agg[(df_agg.type_x .== 0.), :match_type] .= 2
     sort!(df_agg, [:match_type, :type_x, :type_y])
 
-    if addon == ""
-        CSV.write("sim/csv/simu_sigma1_"*string(σ[1])*"_sigma2_"*string(σ[2])*"_size"*string(N)*".csv", df)
-        CSV.write("sim/csv/simu_agg_sigma1_"*string(σ[1])*"_sigma2_"*string(σ[2])*"_size"*string(N)*".csv", df_agg)
-    elseif addon != ""
-        CSV.write("sim/csv/simu_sigma1_"*string(σ[1])*"_sigma2_"*string(σ[2])*"_size"*string(N)*"_"*string(addon)*".csv", df)
-        CSV.write("sim/csv/simu_agg_sigma1_"*string(σ[1])*"_sigma2_"*string(σ[2])*"_size"*string(N)*"_"*string(addon)*".csv", df_agg)
+    # Determine output directory: use addon as path, or current directory if empty
+    output_dir = addon == "" ? "." : addon
+    
+    # Create directory if it doesn't exist (only if a path was specified)
+    if addon != "" && !isdir(output_dir)
+        mkpath(output_dir)
     end
+    
+    # Generate filenames
+    filename_base = "simu_sigma1_" * string(σ[1]) * "_sigma2_" * string(σ[2]) * "_size" * string(N)
+    filename_agg = "simu_agg_sigma1_" * string(σ[1]) * "_sigma2_" * string(σ[2]) * "_size" * string(N)
+    
+    # Build full file paths
+    filepath = joinpath(output_dir, filename_base * ".csv")
+    filepath_agg = joinpath(output_dir, filename_agg * ".csv")
+    
+    # Write CSV files
+    CSV.write(filepath, df)
+    CSV.write(filepath_agg, df_agg)
 
     return df, termstat
 

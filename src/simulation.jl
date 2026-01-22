@@ -1,3 +1,14 @@
+"""
+Simulation functions for generating synthetic matching data
+"""
+
+using ForwardDiff
+using NonLinearProg
+using DataFrames
+using CSV
+using StatsBase
+using Distributions
+using Random
 
 function eqconstraints(uv, mdl, σ; margins = true)
 

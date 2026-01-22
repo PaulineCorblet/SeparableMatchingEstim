@@ -8,7 +8,7 @@ Data preparation functions for matching estimation
 Create matching and wage dataframes for Choo-Siow estimation.
 Returns df_match_xy, df_wage, and obs_model.
 """
-function create_matching_wage_df_CD(df)
+function create_matching_wage_df(df)
     
     nbx = Int64(findmax(df.type_x)[1])
     nby = Int64(findmax(df.type_y)[1])
@@ -71,11 +71,6 @@ function create_matching_wage_df_CD(df)
     sort!(df_match_x0, :type_x)
     sort!(df_match_0y, :type_y)
     
-    # Create indicator matrices and multiply
-    # indmat creates (n_obs, nbx) matrix, transpose gives (nbx, n_obs)
-    # log.(df_match_x0.count) is (nbx,) vector
-    # Result should be (n_obs,) vector
-    log_mu_x0_vec = log.(df_match_x0.count)
     log_mu_0y_vec = log.(df_match_0y.count)
     
     # Ensure vectors are column vectors for matrix multiplication

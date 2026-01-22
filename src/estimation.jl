@@ -108,27 +108,3 @@ function run_estimation(df_match_xy, df_wage; vcov = false)
     end
     
 end
-
-function compute_vcov(df_match_xy, df_wage, pred_mu)
-
-    nbXY = size(df_match_xy)[1]
-
-    bf_cols = [col for col in names(df_match_xy) if startswith(string(col), "BF")]
-    bf_cols_sorted = sort(bf_cols, by = x -> parse(Int, replace(string(x), "BF" => "")))
-    if isempty(bf_cols_sorted)
-        error("No basis function columns (BF1, BF2, ...) found in df_match_xy")
-    end
-    Z_xy = hcat(Matrix(df_match_xy[:, bf_cols_sorted]), df_match_xy.diff_log_mu)
-
-    hat_H = -((pred_mu .* Z_xy)' * Z_xy)/nbXY
-    s_xy = (df_match_xy.count - pred_mu) .* Z_xy
-    hat_S = ((s_xy)' * s_xy)/nbXY
-    
-    # Compute covariance matrix: inv(hat_H) * hat_S * inv(hat_H)
-    inv_H = inv(hat_H)
-    vcov_poisson = inv_H * hat_S * inv_H
-
-    nbw = size(df_wage)[1]
-    hat_A = ()/nbw
-    
-end

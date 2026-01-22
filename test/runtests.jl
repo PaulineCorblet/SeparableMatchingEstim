@@ -16,9 +16,6 @@ using LinearAlgebra
 using Random
 using MathOptInterface
 
-# Include simulation functions
-include(joinpath(@__DIR__, "..", "sim", "functions.jl"))
-
 @testset "SeparableMatchingEstim.jl" begin
     @testset "indmat" begin
         x = [1, 2, 1, 3, 2]
@@ -74,8 +71,8 @@ include(joinpath(@__DIR__, "..", "sim", "functions.jl"))
             return
         end
         
-        # Prepare data using create_matching_wage_df_CD
-        df_match_xy, df_wage, om = create_matching_wage_df_CD(df)
+        # Prepare data using create_matching_wage_df
+        df_match_xy, df_wage, om = create_matching_wage_df(df)
         
         # Check that the function returns the expected structure
         @test hasproperty(df_match_xy, :BF1)

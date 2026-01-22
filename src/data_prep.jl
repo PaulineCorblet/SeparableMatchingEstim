@@ -3,10 +3,37 @@ Data preparation functions for matching estimation
 """
 
 """
-    create_matching_wage_df_CD(df)
+    create_matching_wage_df(df)
 
-Create matching and wage dataframes for Choo-Siow estimation.
-Returns df_match_xy, df_wage, and obs_model.
+Prepare matching and wage dataframes from raw observation data for separable matching estimation.
+
+# Arguments
+- `df::DataFrame`: Input dataframe containing observed matches with columns:
+  - `:type_x`: Worker type (integer, 0 for unmatched firms)
+  - `:type_y`: Firm type (integer, 0 for unmatched workers)
+  - `:x_val1`, `:x_val2`: Worker characteristics
+  - `:y_val1`, `:y_val2`: Firm characteristics
+  - `:wage_obs`: Observed wages (for matched pairs)
+
+# Returns
+- `df_match_xy::DataFrame`: Aggregated matching counts dataframe with columns:
+  - `:type_x`, `:type_y`: Worker and firm types
+  - `:x_val1`, `:x_val2`, `:y_val1`, `:y_val2`: Characteristics
+  - `:BF1`, `:BF2`: Basis functions (absolute differences in characteristics)
+  - `:count`: Number of matches for each (type_x, type_y) pair
+  - `:log_mu_0y`: Log of unmatched firm counts (for each worker type)
+  - `:log_mu_x0`: Log of unmatched worker counts (for each firm type)
+  - `:diff_log_mu`: Difference in log unmatched counts
+- `df_wage::DataFrame`: Wage dataframe with individual observations, including:
+  - All columns from `df_match_xy` plus `:wage_obs`
+  - `:match_type`: Sequential match type identifier
+  - `:log_mu_x0`, `:log_mu_0y`, `:diff_log_mu`: Log unmatched counts for each observation
+- `obs_mdl::model`: Observation model structure created from the dataframes
+
+# Notes
+- Automatically handles missing types (adds zero-count rows if needed)
+- Sorts dataframes by type for consistent ordering
+- Computes basis functions as absolute differences in characteristics
 """
 function create_matching_wage_df(df)
     
@@ -72,6 +99,7 @@ function create_matching_wage_df(df)
     sort!(df_match_0y, :type_y)
     
     log_mu_0y_vec = log.(df_match_0y.count)
+    log_mu_x0_vec = log.(df_match_x0.count)
     
     # Ensure vectors are column vectors for matrix multiplication
     df_wage.log_mu_x0 = vec(indmat(df_wage.type_x) * log_mu_x0_vec)

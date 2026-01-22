@@ -3,12 +3,41 @@ Estimation functions for separable matching models
 """
 
 """
-    run_estimation(df_match_xy, df_wage, om)
+    run_estimation(df_match_xy, df_wage; vcov = false)
 
-Run the estimation procedure with all data (matched and unmatched).
-Returns a tuple with:
-- results: a vector with [sigma1, sigma2, alpha..., gamma...]
-- pred_count: predicted counts from the Poisson regression
+Estimate parameters of a separable matching model using a two-step procedure.
+
+The estimation combines:
+1. Poisson regression on matching counts to estimate matching parameters
+2. OLS regression on wages to estimate wage parameters
+3. Transformation to recover structural parameters (σ₁, σ₂, α, γ)
+
+# Arguments
+- `df_match_xy::DataFrame`: Aggregated matching counts dataframe with columns:
+  - `:count`: Number of matches for each (type_x, type_y) pair
+  - `:BF1`, `:BF2`, ...: Basis function columns (must start with "BF")
+  - `:diff_log_mu`: Difference in log unmatched counts
+  - `:log_mu_0y`: Log of unmatched firm counts (used as offset)
+- `df_wage::DataFrame`: Wage dataframe with columns:
+  - `:wage_obs`: Observed wages
+  - `:BF1`, `:BF2`, ...: Basis function columns (matching those in `df_match_xy`)
+  - `:diff_log_mu`: Difference in log unmatched counts
+- `vcov::Bool`: If `true`, compute and return variance-covariance matrix (default: `false`)
+
+# Returns
+- If `vcov = false`:
+  - `results::Vector{Float64}`: Estimated parameters `[σ₁, σ₂, α₁, ..., αₖ, γ₁, ..., γₖ]`
+    where `k` is the number of basis functions
+  - `pred_mu::Vector{Float64}`: Predicted matching counts from Poisson regression
+- If `vcov = true`:
+  - `results::Vector{Float64}`: Same as above
+  - `vcov_results::Matrix{Float64}`: Variance-covariance matrix of estimated parameters
+  - `pred_mu::Vector{Float64}`: Predicted matching counts from Poisson regression
+
+# Notes
+- The function automatically detects basis function columns (BF1, BF2, ...) in the dataframes
+- Parameters are recovered using the relationship between Poisson and OLS coefficients
+- The variance-covariance matrix uses a sandwich estimator with delta method transformation
 """
 function run_estimation(df_match_xy, df_wage; vcov = false)
 

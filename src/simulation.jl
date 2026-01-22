@@ -10,6 +10,27 @@ using StatsBase
 using Distributions
 using Random
 
+"""
+    eqconstraints(uv, mdl, σ; margins = true)
+
+Compute equilibrium constraints for the separable matching model.
+
+The constraints ensure that matching counts satisfy supply-demand balance:
+- Sum of matches for each worker type equals total workers of that type
+- Sum of matches for each firm type equals total firms of that type
+
+# Arguments
+- `uv::Vector{Float64}`: Vector of utilities `[u₁, ..., uₙₑₓ, v₁, ..., vₙₑᵧ]`
+  where `u` are worker utilities and `v` are firm utilities
+- `mdl::model`: Model structure containing parameters and type counts
+- `σ::Vector{Float64}`: Vector `[σ₁, σ₂]` of matching elasticity parameters
+- `margins::Bool`: If `true`, include type counts in matching probabilities (default: `true`)
+
+# Returns
+- `constraints::Vector{Float64}`: Vector of constraint violations `[margin_x; margin_y]`
+  where `margin_x` and `margin_y` are the differences between supply and demand
+  for each worker and firm type. At equilibrium, all elements should be zero.
+"""
 function eqconstraints(uv, mdl, σ; margins = true)
 
     u = uv[1:mdl.nbx]
@@ -33,7 +54,25 @@ function eqconstraints(uv, mdl, σ; margins = true)
     return [margin_x; margin_y]
 end
 
+"""
+    equilibrium(uv, mdl, σ; margins = true)
 
+Compute equilibrium matching counts and wages for given utilities.
+
+# Arguments
+- `uv::Vector{Float64}`: Vector of utilities `[u₁, ..., uₙₑₓ, v₁, ..., vₙₑᵧ]`
+  where `u` are worker utilities and `v` are firm utilities
+- `mdl::model`: Model structure containing parameters and type counts
+- `σ::Vector{Float64}`: Vector `[σ₁, σ₂]` of matching elasticity parameters
+- `margins::Bool`: If `true`, include type counts in matching probabilities (default: `true`)
+
+# Returns
+- `μ_xy::Matrix{Float64}`: Matrix of size `(nbx, nby)` containing matched pair counts
+- `μ_x0::Vector{Float64}`: Vector of length `nbx` containing unmatched worker counts
+- `μ_0y::Vector{Float64}`: Vector of length `nby` containing unmatched firm counts
+- `w_xy::Matrix{Float64}`: Matrix of size `(nbx, nby)` containing equilibrium wages
+  for each matched pair
+"""
 function equilibrium(uv, mdl, σ; margins = true)
     u = uv[1:mdl.nbx]
     v = uv[mdl.nbx+1:mdl.nbz]
@@ -57,6 +96,31 @@ function equilibrium(uv, mdl, σ; margins = true)
     return μ_xy, μ_x0, μ_0y, w_xy
 end
 
+"""
+    social_planner_opt(mdl, σ; margins = true)
+
+Solve for equilibrium utilities using constrained optimization.
+
+Finds the utility vector that satisfies the equilibrium constraints (supply-demand balance)
+by solving a constrained optimization problem.
+
+# Arguments
+- `mdl::model`: Model structure containing parameters and type counts
+- `σ::Vector{Float64}`: Vector `[σ₁, σ₂]` of matching elasticity parameters
+- `margins::Bool`: If `true`, include type counts in matching probabilities (default: `true`)
+
+# Returns
+- `uv_opt::Vector{Float64}`: Optimal utility vector `[u₁, ..., uₙₑₓ, v₁, ..., vₙₑᵧ]`
+  that satisfies equilibrium constraints
+- `objopt::Float64`: Objective function value at optimum (should be 0.0)
+- `termstat`: Termination status from the optimization solver
+  (e.g., `MathOptInterface.LOCALLY_SOLVED` if successful)
+
+# Notes
+- Uses `NonLinearProg.fmincon` with equality constraints
+- Constraints are computed using `eqconstraints` function
+- Jacobian is computed using automatic differentiation (`ForwardDiff`)
+"""
 function social_planner_opt(mdl, σ; margins = true)
     fun = function(x)
         return 0.0
@@ -83,6 +147,47 @@ function social_planner_opt(mdl, σ; margins = true)
     return uv_opt, objopt, termstat
 end
 
+"""
+    create_dataframe(mdl, σ, N; addon="")
+
+Generate synthetic matching data from model parameters.
+
+Simulates a matching market by:
+1. Solving for equilibrium utilities
+2. Computing equilibrium matching counts and wages
+3. Sampling N observations from the equilibrium distribution
+4. Adding wage noise
+
+# Arguments
+- `mdl::model`: Model structure containing parameters and type counts
+- `σ::Vector{Float64}`: Vector `[σ₁, σ₂]` of matching elasticity parameters
+- `N::Int`: Number of observations to generate
+- `addon::String`: Output directory path for CSV files. If empty (default: `""`),
+  files are saved in the current directory. If specified, the directory will be
+  created if it doesn't exist.
+
+# Returns
+- `df::DataFrame`: Individual-level dataframe with columns:
+  - `:type_x`, `:type_y`: Worker and firm types
+  - `:x_val1`, `:x_val2`, `:y_val1`, `:y_val2`: Characteristics
+  - `:BF1`, `:BF2`: Basis functions (absolute differences)
+  - `:mu_obs`: Matching indicator (always 1 for matched pairs)
+  - `:wage_obs`: Observed wages (equilibrium wages + noise)
+- `termstat`: Termination status from equilibrium optimization
+  (e.g., `MathOptInterface.LOCALLY_SOLVED` if successful)
+
+# Output Files
+Two CSV files are written:
+- `simu_sigma1_{σ₁}_sigma2_{σ₂}_size{N}.csv`: Individual-level data
+- `simu_agg_sigma1_{σ₁}_sigma2_{σ₂}_size{N}.csv`: Aggregated matching counts
+
+Files are saved to the directory specified by `addon` (or current directory if empty).
+
+# Notes
+- Wage noise is drawn from a standard normal distribution
+- Matching probabilities are computed from equilibrium utilities
+- Observations are sampled with replacement using weighted sampling
+"""
 function create_dataframe(mdl, σ, N; addon="")
 
     uv_opt, objopt, termstat = social_planner_opt(mdl, σ)
